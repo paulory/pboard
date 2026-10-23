@@ -28,27 +28,36 @@ jobs:
       - name: DSP test
         run: ctest --test-dir build -C Release --output-on-failure
 
-      - name: Ad-hoc sign and package
+      - name: Ad-hoc sign and build DMG
         run: |
           ART=build/PBoard_artefacts/Release
-          mkdir -p dist
           for b in "$ART/Standalone/pboard.app" "$ART/VST3/pboard.vst3" "$ART/AU/pboard.component"; do
             codesign --force --deep --sign - "$b"
           done
-          ditto "$ART/Standalone/pboard.app" dist/pboard.app
-          ditto "$ART/VST3/pboard.vst3" dist/pboard.vst3
-          ditto "$ART/AU/pboard.component" dist/pboard.component
-          cp README.md dist/
-          cd dist && zip -qry ../pboard-macos.zip .
+
+          STAGE=dmg-stage
+          mkdir -p "$STAGE/Plug-Ins"
+          ditto "$ART/Standalone/pboard.app" "$STAGE/pboard.app"
+          ditto "$ART/VST3/pboard.vst3" "$STAGE/Plug-Ins/pboard.vst3"
+          ditto "$ART/AU/pboard.component" "$STAGE/Plug-Ins/pboard.component"
+          cp "packaging/Install Plugins.command" "$STAGE/"
+          chmod +x "$STAGE/Install Plugins.command"
+          cp README.md "$STAGE/README.md"
+          ln -s /Applications "$STAGE/Applications"
+
+          VERSION=$(grep -m1 -E "project\(PBoard VERSION" CMakeLists.txt | sed -E 's/.*VERSION ([0-9.]+).*/\1/')
+          hdiutil create -volname "pboard $VERSION" -srcfolder "$STAGE" -ov -format UDZO "pboard-$VERSION.dmg"
+          hdiutil verify "pboard-$VERSION.dmg"
+          echo "DMG_FILE=pboard-$VERSION.dmg" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pboard-macos
-          path: pboard-macos.zip
+          name: pboard-macos-dmg
+          path: ${{ env.DMG_FILE }}
 
       - name: Publish release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: pboard-macos.zip
+          files: ${{ env.DMG_FILE }}

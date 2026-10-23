@@ -11,21 +11,18 @@ Signal chain: **IN > GNAW (distortion) > SWIRL (chorus) > PB-50 amp > IR CAB > O
 | **PB-50** | Two-channel amp. **CLEAN**: American-style, Fender tone stack, lots of headroom. **CRUNCH**: British-style cascaded gain stages, bright cap, Marshall tone stack. Both tone stacks are the real passive circuits (derived by nodal analysis), so the knobs interact like on the real thing. |
 | **IR CAB** | Convolution cab. Ships with a built-in synthetic 4x12 voicing; **LOAD IR** takes any `.wav` / `.aif` impulse response. The IR path is saved with the session. |
 
-## Install (from GitHub Actions)
+## Install (DMG)
 
-1. Open the **Actions** tab, pick the latest green **Build macOS** run, download **pboard-macos**.
-2. Unzip and copy:
-   - `pboard.app` to `/Applications`
-   - `pboard.vst3` to `~/Library/Audio/Plug-Ins/VST3`
-   - `pboard.component` to `~/Library/Audio/Plug-Ins/Components`
-3. The builds are ad-hoc signed (not notarised), so clear the download quarantine once:
+1. Get `pboard-<version>.dmg`: from a GitHub **Release**, or from the latest green **Build macOS** run in the Actions tab (artifact **pboard-macos-dmg**; GitHub wraps it in a zip).
+2. Open the DMG:
+   - drag **pboard.app** onto **Applications**
+   - double-click **Install Plugins.command** to install the VST3 and AU for your user
+3. The builds are ad-hoc signed, not notarised. The first time, right-click **pboard.app** (and **Install Plugins.command**) and choose **Open**, then confirm. If macOS still blocks the app:
    ```sh
-   xattr -dr com.apple.quarantine /Applications/pboard.app \
-     ~/Library/Audio/Plug-Ins/VST3/pboard.vst3 \
-     ~/Library/Audio/Plug-Ins/Components/pboard.component
+   xattr -dr com.apple.quarantine /Applications/pboard.app
    ```
 
-Pushing a tag like `v0.1.0` also publishes the zip as a GitHub Release.
+Pushing a tag like `v0.1.0` publishes the DMG as a GitHub Release.
 
 ## Standalone tips
 
