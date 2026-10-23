@@ -1,0 +1,54 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (universal arm64 + x86_64)
+        run: |
+          cmake -B build -G Xcode \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: DSP test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Ad-hoc sign and package
+        run: |
+          ART=build/PBoard_artefacts/Release
+          mkdir -p dist
+          for b in "$ART/Standalone/pboard.app" "$ART/VST3/pboard.vst3" "$ART/AU/pboard.component"; do
+            codesign --force --deep --sign - "$b"
+          done
+          ditto "$ART/Standalone/pboard.app" dist/pboard.app
+          ditto "$ART/VST3/pboard.vst3" dist/pboard.vst3
+          ditto "$ART/AU/pboard.component" dist/pboard.component
+          cp README.md dist/
+          cd dist && zip -qry ../pboard-macos.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pboard-macos
+          path: pboard-macos.zip
+
+      - name: Publish release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: pboard-macos.zip
