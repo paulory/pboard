@@ -72,7 +72,9 @@ private:
     pb::BBDChorus chorus;
     pb::AmpSim amp;
 
-    juce::SmoothedValue<float> ratMix, choMix, ampMix, cabMix, inGainS, outGainS, cabLevelS;
+    juce::SmoothedValue<float> ratMix, choMix, ampMix, cabMix, inGainS, outGainS, cabLevelS, inputSelect;
+    float inEnv[2] { 0.0f, 0.0f };
+    int activeInput = 0;
 
     double currentSampleRate = 48000.0;
     bool firstBlock = true;

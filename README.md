@@ -26,8 +26,8 @@ Pushing a tag like `v0.1.0` publishes the DMG as a GitHub Release.
 
 ## Standalone tips
 
-- Open **Options > Audio/MIDI Settings**, pick your interface and the input your guitar is on. pboard uses the **first input channel**.
-- JUCE's standalone mutes the input by default to avoid feedback through laptop speakers. Untick **Mute audio input** in the same settings window when using headphones or an interface.
+- Open **Options > Audio/MIDI Settings** and pick your interface. Inputs are offered in pairs (e.g. "Input 1 + 2"); pboard automatically follows whichever input of the pair your guitar is on.
+- The standalone app starts with the input unmuted (JUCE normally mutes it). It stays muted only when the input is the Mac's built-in microphone, to avoid feedback through the speakers.
 - Allow microphone access when macOS asks (that is how macOS gates audio inputs).
 
 ## Build locally

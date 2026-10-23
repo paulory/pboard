@@ -121,6 +121,8 @@ void PboardProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
         s->reset (sampleRate, 0.02);
     for (auto* s : { &inGainS, &outGainS, &cabLevelS })
         s->reset (sampleRate, 0.05);
+    inputSelect.reset (sampleRate, 0.03);
+    inputSelect.setCurrentAndTargetValue ((float) activeInput);
 
     setLatencySamples (juce::roundToInt (oversampling->getLatencyInSamples()));
     firstBlock = true;
@@ -174,11 +176,33 @@ void PboardProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     {
         const int n = juce::jmin (maxBlock, numSamples - start);
 
-        // Guitar is mono: take the first input channel.
+        // Guitar is mono: follow whichever input channel carries the signal
+        // (guitar in input 1 or 2 both work), crossfading on a change.
         auto* m = mono.getWritePointer (0);
-        juce::FloatVectorOperations::copy (m, buffer.getReadPointer (0, start), n);
-        for (int i = 0; i < n; ++i)
-            m[i] *= inGainS.getNextValue();
+        const int numIn = juce::jmin (getTotalNumInputChannels(), buffer.getNumChannels());
+        if (numIn >= 2)
+        {
+            const float pk0 = buffer.getMagnitude (0, start, n), pk1 = buffer.getMagnitude (1, start, n);
+            inEnv[0] = juce::jmax (pk0, inEnv[0] * 0.97f);
+            inEnv[1] = juce::jmax (pk1, inEnv[1] * 0.97f);
+            if (inEnv[1] > inEnv[0] * 2.0f)       activeInput = 1;   // hysteresis: switch only on a clear winner
+            else if (inEnv[0] > inEnv[1] * 2.0f)  activeInput = 0;
+            inputSelect.setTargetValue ((float) activeInput);
+
+            const auto* c0 = buffer.getReadPointer (0, start);
+            const auto* c1 = buffer.getReadPointer (1, start);
+            for (int i = 0; i < n; ++i)
+            {
+                const float w = inputSelect.getNextValue();
+                m[i] = (c0[i] + w * (c1[i] - c0[i])) * inGainS.getNextValue();
+            }
+        }
+        else
+        {
+            juce::FloatVectorOperations::copy (m, buffer.getReadPointer (0, start), n);
+            for (int i = 0; i < n; ++i)
+                m[i] *= inGainS.getNextValue();
+        }
         inPk = juce::jmax (inPk, juce::FloatVectorOperations::findMaximum (m, n),
                            -juce::FloatVectorOperations::findMinimum (m, n));
 

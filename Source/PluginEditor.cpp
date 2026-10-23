@@ -1,5 +1,9 @@
 #include "PluginEditor.h"
 
+#if JucePlugin_Build_Standalone
+ #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
+#endif
+
 namespace ui
 {
 namespace
@@ -628,6 +632,19 @@ PboardEditor::PboardEditor (PboardProcessor& p)
 
     setSize (1100, 700);
     startTimerHz (30);
+
+   #if JucePlugin_Build_Standalone
+    // JUCE's standalone app mutes the input by default (feedback guard), which
+    // silences a guitar app. Unmute, unless the input is the built-in mic.
+    if (p.wrapperType == juce::AudioProcessor::wrapperType_Standalone)
+        if (auto* holder = juce::StandalonePluginHolder::getInstance())
+        {
+            auto* device = holder->deviceManager.getCurrentAudioDevice();
+            const bool builtInMic = device != nullptr && device->getName().containsIgnoreCase ("microphone");
+            if (! builtInMic)
+                holder->getMuteInputValue().setValue (false);
+        }
+   #endif
 }
 
 PboardEditor::~PboardEditor()
